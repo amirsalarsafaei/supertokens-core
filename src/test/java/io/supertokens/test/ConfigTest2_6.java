@@ -269,6 +269,7 @@ public class ConfigTest2_6 {
         assertEquals(config.getHost(process.getProcess()), "localhost");
         assertNull(config.getAPIKeys());
         assertEquals(10, config.getMaxThreadPoolSize());
+        assertEquals(10, config.getMinSpareThreads());
         assertFalse(config.getHttpsEnabled());
         assert (config.isTelemetryDisabled() == telemetryDisabled);
 

@@ -195,6 +195,12 @@ public class CoreConfig {
     @ConfigDescription("Sets the max thread pool size for incoming http server requests. (Default: 10)")
     private int max_server_pool_size = 10;
 
+    @EnvName("MIN_SPARE_THREADS")
+    @ConfigYamlOnly
+    @JsonProperty
+    @ConfigDescription("Sets the minimum spare(idle) threads in server pool. (Default: 10)")
+    private int min_spare_threads = 10;
+
     @EnvName("API_KEYS")
     @NotConflictingInApp
     @JsonProperty
@@ -411,6 +417,21 @@ public class CoreConfig {
                     "This should be in the format http://<host>:<port> or https://<host>:<port>. (Default: " +
                     "null)")
     private String otel_collector_connection_uri = null;
+
+    @EnvName("METRICS_ENABLED")
+    @ConfigYamlOnly
+    @JsonProperty
+    @ConfigDescription(
+            "")
+    private Boolean metrics_enabled = false;
+
+    @EnvName("METRICS_PORT")
+    @ConfigYamlOnly
+    @JsonProperty
+    @ConfigDescription(
+            "")
+    private int metrics_port = 9000;
+
 
     @IgnoreForAnnotationCheck
     private static boolean disableOAuthValidationForTest = false;
@@ -643,6 +664,10 @@ public class CoreConfig {
         return max_server_pool_size;
     }
 
+    public int getMinSpareThreads() {
+        return min_spare_threads;
+    }
+
     public boolean getHttpsEnabled() {
         return webserver_https_enabled;
     }
@@ -661,6 +686,14 @@ public class CoreConfig {
 
     public String getOtelCollectorConnectionURI() {
         return otel_collector_connection_uri;
+    }
+
+    public boolean getIsMetricsEnabled() {
+        return metrics_enabled;
+    }
+
+    public int getMetricsPort() {
+        return metrics_port;
     }
 
     private String getConfigFileLocation(Main main) {

@@ -16,12 +16,16 @@
 
 package io.supertokens.webserver;
 
+import io.micrometer.core.instrument.binder.tomcat.TomcatMetrics;
+import io.micrometer.prometheus.PrometheusConfig;
 import io.supertokens.Main;
 import io.supertokens.OperatingSystem;
 import io.supertokens.ResourceDistributor;
 import io.supertokens.cliOptions.CLIOptions;
 import io.supertokens.config.Config;
 import io.supertokens.exceptions.QuitProgramException;
+import io.prometheus.client.exporter.HTTPServer;
+import io.supertokens.metrics.MetricsRegistry;
 import io.supertokens.output.Logging;
 import io.supertokens.pluginInterface.multitenancy.TenantIdentifier;
 import io.supertokens.pluginInterface.multitenancy.exceptions.TenantOrAppNotFoundException;
@@ -66,6 +70,8 @@ import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.jetbrains.annotations.TestOnly;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
@@ -87,6 +93,7 @@ public class Webserver extends ResourceDistributor.SingletonResource {
 
     private final WebServerLogging logging;
     private TomcatReference tomcatReference;
+    private HTTPServer prometheusHttpServer;
 
     private Webserver(Main main) {
         this.main = main;
@@ -134,7 +141,7 @@ public class Webserver extends ResourceDistributor.SingletonResource {
         connector.setProperty("maxThreads", Config.getBaseConfig(main).getMaxThreadPoolSize() + "");
         connector.setPort(Config.getBaseConfig(main).getPort(main));
         connector.setProperty("address", Config.getBaseConfig(main).getHost(main));
-
+        connector.setProperty("minSpareThreads", Config.getBaseConfig(main).getMinSpareThreads() + "");
         tomcat.setConnector(connector);
 
         // we do this because we may run multiple tomcat servers in the same JVM
@@ -161,6 +168,25 @@ public class Webserver extends ResourceDistributor.SingletonResource {
                             + "running this on port 80 or 443, make "
                             + "sure to give the right permission to SuperTokens.\n- The provided host is not available"
                             + " on this server");
+        }
+
+        MetricsRegistry.getInstance(main).registerMetrics(
+            new TomcatMetrics(context.getManager(), Collections.emptyList())
+        );
+
+        if (Config.getBaseConfig(main).getIsMetricsEnabled()) {
+            try {
+                prometheusHttpServer = new HTTPServer.Builder()
+                        .withPort(Config.getBaseConfig(main).getMetricsPort())
+                        .withRegistry(MetricsRegistry.getInstance(main).getRegistry().getPrometheusRegistry()).build();
+
+                Logging.info(main, TenantIdentifier.BASE_TENANT, "Started metrics server", true);
+            } catch (IOException e) {
+                Logging.error(main, TenantIdentifier.BASE_TENANT, null, false, e);
+                throw new QuitProgramException(
+                        "Error while starting metrics server. Possible reasons:\n- another instance of SuperTokens "
+                            + "metric server is already running on the same port");
+            }
         }
 
         tomcatReference = new TomcatReference(tomcat, context);
@@ -346,6 +372,9 @@ public class Webserver extends ResourceDistributor.SingletonResource {
                 return;
             }
             Logging.info(main, TenantIdentifier.BASE_TENANT, "Stopping webserver...", true);
+
+            prometheusHttpServer.close();
+
             if (tomcat.getServer().getState() != LifecycleState.DESTROYED) {
                 if (tomcat.getServer().getState() != LifecycleState.STOPPED) {
                     try {
@@ -420,8 +449,8 @@ public class Webserver extends ResourceDistributor.SingletonResource {
     }
 
     public static class TomcatReference {
-        private Tomcat tomcat;
-        private StandardContext context;
+        private final Tomcat tomcat;
+        private final StandardContext context;
 
         TomcatReference(Tomcat tomcat, StandardContext context) {
             this.tomcat = tomcat;

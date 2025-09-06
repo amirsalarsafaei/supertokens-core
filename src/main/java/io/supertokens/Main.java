@@ -36,6 +36,7 @@ import io.supertokens.emailpassword.PasswordHashing;
 import io.supertokens.exceptions.QuitProgramException;
 import io.supertokens.featureflag.FeatureFlag;
 import io.supertokens.jwt.exceptions.UnsupportedJWTSigningAlgorithmException;
+import io.supertokens.metrics.MetricsRegistry;
 import io.supertokens.multitenancy.MultitenancyHelper;
 import io.supertokens.output.Logging;
 import io.supertokens.pluginInterface.exceptions.DbInitException;
@@ -171,6 +172,8 @@ public class Main {
         Version.loadVersion(this, CLIOptions.get(this).getInstallationPath() + "version.yaml");
 
         TelemetryProvider.initialize(this);
+
+        MetricsRegistry.initialize(this);
 
         // loading storage layer
         try {

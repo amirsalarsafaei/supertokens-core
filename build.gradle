@@ -99,6 +99,11 @@ dependencies {
 
     implementation("io.opentelemetry.semconv:opentelemetry-semconv")
 
+    // Metrics
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.12.0'
+    implementation 'io.micrometer:micrometer-core:1.12.0'
+    implementation 'io.prometheus:simpleclient_httpserver:0.16.0'
+
 
     compileOnly project(":supertokens-plugin-interface")
 
